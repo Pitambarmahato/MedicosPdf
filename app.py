@@ -6,7 +6,7 @@ app.config['SECRET_KEY'] = '5791628bb0b13ce0c676dfde280ba245'
 
 posts = [
     {
-        'author': 'Corey Schafer',
+        'author': 'Pitambar Mahato',
         'title': 'Blog Post 1',
         'content': 'First post content',
         'date_posted': 'April 20, 2018'
