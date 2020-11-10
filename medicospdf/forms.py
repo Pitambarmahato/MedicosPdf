@@ -1,5 +1,6 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, BooleanField
+from wtforms import StringField, SelectField, PasswordField, SubmitField, BooleanField, TextAreaField
+from flask_wtf.file import FileField, FileAllowed
 from wtforms.validators import DataRequired, Length, Email, EqualTo, ValidationError
 from medicospdf.models import User
 
@@ -27,3 +28,13 @@ class LoginForm(FlaskForm):
 	password = PasswordField('Password', validators = [DataRequired()])
 	remember = BooleanField('Remember Me')
 	submit = SubmitField('Login')
+
+
+class SlideForm(FlaskForm):
+	title = StringField('Title', validators = [DataRequired()])
+	description = TextAreaField('Description', validators = [DataRequired()])
+	category = SelectField(u'Field Select', 
+		choices = [('Book', 'Book'), ('Copy', 'Copy')], validators = [DataRequired()])
+	file = FileField('Select a File To Upload', 
+		validators = [FileAllowed(['pdf', 'ppt', 'pptx'])])
+	submit = SubmitField('Post')
