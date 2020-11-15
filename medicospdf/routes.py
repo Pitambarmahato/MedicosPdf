@@ -23,7 +23,7 @@ posts = [
 ]
 
 def convert_file(file_fn, random_hex):
-    file_name = 'http://127.0.0.1:5000/static/slide_files/' + file_fn
+    file_name = 'http://0.0.0.0:80/static/slide_files/' + file_fn
     print(file_name)
     converted_folder = 'medicospdf/static/slide_files'
     output_path = os.path.join(os.getcwd() + '/') + converted_folder + '/' + file_fn
@@ -61,6 +61,7 @@ def slide(slide_id):
     slide = Slide.query.get_or_404(slide_id)
     return render_template('slide.html', title = slide.title, 
                                 slide = slide, legend = Slide)
+
 
 @app.route('/like/<int:slide_id>/<action>')
 @login_required
