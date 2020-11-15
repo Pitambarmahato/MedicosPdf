@@ -23,12 +23,12 @@ posts = [
 ]
 
 def convert_file(file_fn, random_hex):
-    file_name = 'http://0.0.0.0:80/static/slide_files/' + file_fn
+    file_name = 'http://127.0.0.1:5000/static/slide_files/' + file_fn
     print(file_name)
     converted_folder = 'medicospdf/static/slide_files'
     output_path = os.path.join(os.getcwd() + '/') + converted_folder + '/' + file_fn
     print(output_path)
-    r = os.system('unoconv -f pdf --output = '+ output_path + ' ' + file_name)
+    r = os.system('unoconv -f pdf --output='+ output_path + ' ' + file_name)
     if r == 0:
         return random_hex + '.pdf'
     else: 
@@ -43,14 +43,36 @@ def save_file(form_file):
     print(file_path)
     form_file.save(file_path)
     file_conv = convert_file(file_fn, random_hex)
+    print(file_conv)
     return file_conv, random_hex
 
 
 
 @app.route("/")
 @app.route("/home")
+@login_required
 def home():
-    return render_template('home.html', posts=posts)
+    slides = Slide.query.order_by(Slide.date_posted.desc())
+    print(slides)
+    return render_template('home.html', posts=slides)
+
+@app.route('/slide/<int:slide_id>')
+def slide(slide_id):
+    slide = Slide.query.get_or_404(slide_id)
+    return render_template('slide.html', title = slide.title, 
+                                slide = slide, legend = Slide)
+
+@app.route('/like/<int:slide_id>/<action>')
+@login_required
+def like_action(slide_id, action):
+    slide = Slide.query.filter_by(id=slide_id).first_or_404()
+    if action == 'like':
+        current_user.like_slide(slide)
+        db.session.commit()
+    if action == 'unlike':
+        current_user.unlike_slide(slide)
+        db.session.commit()
+    return redirect(request.referrer)
 
 
 @app.route("/about")
@@ -89,11 +111,13 @@ def login():
     return render_template('login.html', title='Login', form=form)
 
 @app.route('/slide/new', methods = ['GET', 'POST'])
+@login_required
 def new_slide():
     form = SlideForm()
     if form.validate_on_submit():
         if form.file.data:
             uploaded_file, random_hex = save_file(form.file.data)
+            print(uploaded_file)
         if uploaded_file == random_hex + '.pdf':
             slide = Slide(title = form.title.data, 
                 category = form.category.data, description = form.description.data, 

@@ -32,7 +32,7 @@ class LoginForm(FlaskForm):
 
 class SlideForm(FlaskForm):
 	title = StringField('Title', validators = [DataRequired()])
-	description = TextAreaField('Description', validators = [DataRequired()])
+	description = TextAreaField('Description', validators = [Length(min = 200), DataRequired()])
 	category = SelectField(u'Field Select', 
 		choices = [('Book', 'Book'), ('Copy', 'Copy')], validators = [DataRequired()])
 	file = FileField('Select a File To Upload', 

@@ -22,6 +22,25 @@ class User(db.Model, UserMixin):
     is_admin = db.Column(db.Boolean, default = False)
     posts = db.relationship('Post', backref='author', lazy=True)
     slides = db.relationship('Slide', backref = 'author', lazy = True)
+    liked = db.relationship('SlideLike', foreign_keys = 'SlideLike.user_id', 
+        backref = 'author', lazy = True)
+
+    def like_slide(self, slide):
+        if not self.has_liked_slide(slide):
+            like = SlideLike(user_id = self.id, slide_id = slide.id)
+            db.session.add(like)
+
+    def unlike_slide(self, slide):
+        if self.has_liked_slide(slide):
+            SlideLike.query.filter_by(
+                user_id = self.id, 
+                slide_id = slide.id).delete()
+
+    def has_liked_slide(self, slide):
+        return SlideLike.query.filter(
+            SlideLike.user_id == self.id, 
+            SlideLike.slide_id == slide.id).count()>0
+
 
     def __repr__(self):
         return f"User('{self.username}', '{self.email}', '{self.image_file}')"
@@ -44,12 +63,18 @@ class Slide(db.Model):
     description = db.Column(db.Text, nullable = False)
     category = db.Column(db.String(20), nullable = False)
     file = db.Column(db.String(1000), nullable = False)
+    date_posted = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable = False)
+    likes = db.relationship('SlideLike', backref = 'slide', lazy = True)
 
     def __repr__(self):
         return f"Slide('{self.title}', '{self.description}', '{self.file}')"
 
 
+class SlideLike(db.Model):
+    id = db.Column(db.Integer, primary_key = True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    slide_id = db.Column(db.Integer, db.ForeignKey('slide.id'))
 
 class Controller(ModelView):
     def is_accessible(self):

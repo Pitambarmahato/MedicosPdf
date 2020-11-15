@@ -1,0 +1,30 @@
+{% extends 'layout.html' %}
+{% block content %}
+	<article class="media content-section">
+		<div class="media-body">
+			<div class="article-metadata">
+				<a class="mr-2" href="#">{{ slide.author.username }}</a>
+
+				<h2 class="article-title">{{ slide.title }}</h2>
+				<div style = {height:400px; width:200px} id = 'viewpdf'></div>
+			</div>
+			<div class="article-content">{{ slide.description }}</div>
+			<div class="article-content">{{ slide.category }}</div>
+            {% if current_user.has_liked_slide(slide) %}
+              <a href="{{ url_for('like_action', slide_id = slide.id, action = 'unlike') }}"><i class="fa fa-heart"></i></a>
+            {% else %}
+              <a href="{{ url_for('like_action', slide_id = slide.id, action = 'like') }}"><i class="fa fa-heart-o"></i></a>
+            {% endif %}
+            <p>{{ slide.likes|count }} likes</p>
+		</div>
+	</article>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfobject/2.1.1/pdfobject.min.js"></script>
+    <script src="https://code.jquery.com/jquery-2.2.4.min.js"></script>
+    <script type="text/javascript">
+    	var viewer = $('#viewpdf');
+    	var slide_name = '{{url_for('static', filename = 'slide_files/'+ slide.file) }}';
+    	PDFObject.embed(slide_name, viewer);
+    </script>
+
+
+{% endblock %}
