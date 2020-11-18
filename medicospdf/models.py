@@ -24,6 +24,9 @@ class User(db.Model, UserMixin):
     slides = db.relationship('Slide', backref = 'author', lazy = True)
     liked = db.relationship('SlideLike', foreign_keys = 'SlideLike.user_id', 
         backref = 'author', lazy = True)
+    comments = db.relationship('Comment', backref = 'author', lazy = True)
+    categories = db.relationship('Category', backref = 'author', lazy = True)
+
 
     def like_slide(self, slide):
         if not self.has_liked_slide(slide):
@@ -58,14 +61,17 @@ class Post(db.Model):
 
 
 class Slide(db.Model):
+    __searchable__  = ['title', 'description']
     id = db.Column(db.Integer, primary_key = True)
     title = db.Column(db.String(200), nullable = False)
     description = db.Column(db.Text, nullable = False)
-    category = db.Column(db.String(20), nullable = False)
     file = db.Column(db.String(1000), nullable = False)
     date_posted = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable = False)
     likes = db.relationship('SlideLike', backref = 'slide', lazy = True)
+    comments = db.relationship('Comment', backref = 'slide', lazy = True)
+    category_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable = True)
+
 
     def __repr__(self):
         return f"Slide('{self.title}', '{self.description}', '{self.file}')"
@@ -75,6 +81,24 @@ class SlideLike(db.Model):
     id = db.Column(db.Integer, primary_key = True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     slide_id = db.Column(db.Integer, db.ForeignKey('slide.id'))
+
+class Comment(db.Model):
+    id = db.Column(db.Integer, primary_key= True)
+    comment = db.Column(db.Text, nullable = False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable = False)
+    slide_id = db.Column(db.Integer, db.ForeignKey('slide.id'), nullable = False)
+
+    def __repr__(self):
+        return f"Comment('self.comment)')"
+
+class Category(db.Model):
+    id = db.Column(db.Integer, primary_key = True, autoincrement = True)
+    name = db.Column(db.String(200), nullable = False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable = False)
+    slides = db.relationship('Slide', backref = 'cats', lazy = True)
+
+    def __repr__(self):
+        return f"Category('{self.name}')"
 
 class Controller(ModelView):
     def is_accessible(self):
@@ -88,3 +112,4 @@ class Controller(ModelView):
 
 
 admin.add_view(Controller(User, db.session, endpoint = 'user'))
+admin.add_view(Controller(Category, db.session, endpoint = 'categories'))

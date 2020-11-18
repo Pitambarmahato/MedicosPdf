@@ -9,13 +9,43 @@
 				<div style = {height:400px; width:200px} id = 'viewpdf'></div>
 			</div>
 			<div class="article-content">{{ slide.description }}</div>
-			<div class="article-content">{{ slide.category }}</div>
+			<div class="article-content"><p>Category:&nbsp; {{ slide.cats.name }}</p></div>
             {% if current_user.has_liked_slide(slide) %}
               <a href="{{ url_for('like_action', slide_id = slide.id, action = 'unlike') }}"><i class="fa fa-heart"></i></a>
             {% else %}
               <a href="{{ url_for('like_action', slide_id = slide.id, action = 'like') }}"><i class="fa fa-heart-o"></i></a>
             {% endif %}
             <p>{{ slide.likes|count }} likes</p>
+            <a href="{{ url_for('download', path = path) }}">download</a>
+            <form method="POST" action="">
+				{{ form.hidden_tag() }}
+				<fieldset class="form-group">
+					<legend class="border-bottom mb-4">{{ comment }}</legend>
+					<div class="form-group">
+						{{ form.comment.label(class = 'form-control-label') }}
+						{% if form.comment.errors %}
+							{{ form.comment.label(class = 'form-control form-control-lg is-invalid')}}
+							<div class="invalid-feedback">
+								{% for error in form.comment.errors %}
+								<span>
+									{{ error }}
+								</span>
+								{% endfor %}
+							</div>
+						{% else %}
+							{{ form.comment(class = 'form-control form-control-lg')}}
+						{% endif %}
+					</div>
+					<div class="form-group">
+						{{ form.submit(class = 'btn btn-outline-info') }}
+					</div>
+
+				</fieldset>
+			</form>
+			{% for comment in comments %}
+				<p>{{ comment.comment | truncate(300)}}</p>
+			{% endfor %}
+
 		</div>
 	</article>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfobject/2.1.1/pdfobject.min.js"></script>

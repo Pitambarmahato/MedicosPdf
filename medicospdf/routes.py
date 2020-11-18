@@ -1,30 +1,13 @@
-from flask import render_template, url_for, flash, redirect, request
+from flask import render_template, url_for, flash, redirect, request, send_file
 from medicospdf import app, db, bcrypt
-from medicospdf.forms import RegistrationForm, LoginForm, SlideForm
-from medicospdf.models import User, Post, Slide
+from medicospdf.forms import RegistrationForm, LoginForm, SlideForm, CommentForm, SearchForm
+from medicospdf.models import User, Post, Slide, Comment, Category
 from flask_login import login_user, current_user, logout_user, login_required
 import secrets
 import os
 
-
-posts = [
-    {
-        'author': 'Pitambar Mahato',
-        'title': 'Blog Post 1',
-        'content': 'First post content',
-        'date_posted': 'April 20, 2018'
-    },
-    {
-        'author': 'Jane Doe',
-        'title': 'Blog Post 2',
-        'content': 'Second post content',
-        'date_posted': 'April 21, 2018'
-    }
-]
-
 def convert_file(file_fn, random_hex):
     file_name = 'http://0.0.0.0:80/static/slide_files/' + file_fn
-    print(file_name)
     converted_folder = 'medicospdf/static/slide_files'
     output_path = os.path.join(os.getcwd() + '/') + converted_folder + '/' + file_fn
     print(output_path)
@@ -48,19 +31,36 @@ def save_file(form_file):
 
 
 
-@app.route("/")
-@app.route("/home")
+@app.route("/", methods = ['GET', 'POST'])
+@app.route("/home", methods = ['GET', 'POST'])
 @login_required
 def home():
-    slides = Slide.query.order_by(Slide.date_posted.desc())
-    print(slides)
-    return render_template('home.html', posts=slides)
+    cat = Category.query.all()
+    page = request.args.get('page', 1, type = int)
+    slides = Slide.query.order_by(Slide.date_posted.desc()).paginate(page = page, per_page = 6)
+    if request.method == 'POST' and 'tag' in request.form:
+        tag = request.form['tag']
+        search = '%{}%'.format(tag)
+        slides = Slide.query.filter(Slide.title.like(search)).paginate(page=page, per_page = 6)
+        return render_template('home.html', posts = slides, categories = cat)
 
-@app.route('/slide/<int:slide_id>')
+    return render_template('home.html', posts=slides, categories = cat)
+
+@app.route('/slide/<int:slide_id>', methods= ['GET', 'POST'])
 def slide(slide_id):
+    cat = Category.query.all()
     slide = Slide.query.get_or_404(slide_id)
+    form = CommentForm()
+    if form.validate_on_submit():
+        comment = Comment(comment = form.comment.data, author = current_user, slide_id = slide.id)
+        db.session.add(comment)
+        db.session.commit()
+        flash('Your comment has been posted.', 'success')
+        return redirect(url_for('slide', slide_id = slide.id))
+    comments = Comment.query.filter_by(slide_id = slide.id).all()
     return render_template('slide.html', title = slide.title, 
-                                slide = slide, legend = Slide)
+                        slide = slide, comments = comments, 
+                        form = form, legend = Slide, categories = cat)
 
 
 @app.route('/like/<int:slide_id>/<action>')
@@ -78,7 +78,8 @@ def like_action(slide_id, action):
 
 @app.route("/about")
 def about():
-    return render_template('about.html', title='About')
+    cat = Category.query.all()
+    return render_template('about.html', title='About', categories = cat)
 
 
 @app.route("/register", methods=['GET', 'POST'])
@@ -115,13 +116,14 @@ def login():
 @login_required
 def new_slide():
     form = SlideForm()
+    cat = Category.query.all()
     if form.validate_on_submit():
         if form.file.data:
             uploaded_file, random_hex = save_file(form.file.data)
             print(uploaded_file)
         if uploaded_file == random_hex + '.pdf':
             slide = Slide(title = form.title.data, 
-                category = form.category.data, description = form.description.data, 
+                category_id = form.category.data, description = form.description.data, 
                 file = uploaded_file, author = current_user)
             db.session.add(slide)
             db.session.commit()
@@ -130,7 +132,17 @@ def new_slide():
         else:
             flash('Your Slide is not Created!!!', 'danger')
             return redirect(url_for('new_slide'))
-    return render_template('create_slide.html', title = 'Add New Slide', form = form)
+    return render_template('create_slide.html', title = 'Add New Slide', form = form, categories = cat)
+
+@app.route('/download/<path>')
+def download(path = None):
+    if path is None:
+        self.Error(400)
+    try:
+        return send_file(path, as_attachment = True)
+    except Exception as e:
+        self.log.exception(e)
+        self.Error(400)
 
 @app.route('/logout')
 def logout():
@@ -141,3 +153,14 @@ def logout():
 @login_required
 def account():
     return render_template('account.html', title = 'Account')
+
+@app.route('/explore')
+def explore():
+    cat = Category.query.all()
+    return render_template('explore.html', categories = cat)
+
+@app.route('/category/<name>')
+def category(name):
+    cats = Category.query.all()
+    cat = Category.query.filter_by(name = name).first_or_404()
+    return render_template('category.html', name = name, posts = cat.slides, categories = cats)
