@@ -1,13 +1,13 @@
-from flask import render_template, url_for, flash, redirect, request, send_file
+from flask import render_template, url_for, flash, redirect, request, send_file, send_from_directory, g
 from medicospdf import app, db, bcrypt
 from medicospdf.forms import RegistrationForm, LoginForm, SlideForm, CommentForm, SearchForm
-from medicospdf.models import User, Post, Slide, Comment, Category
+from medicospdf.models import User, Post, Slide, Comment, Category, followers
 from flask_login import login_user, current_user, logout_user, login_required
 import secrets
 import os
 
 def convert_file(file_fn, random_hex):
-    file_name = 'http://0.0.0.0:80/static/slide_files/' + file_fn
+    file_name = 'http://127.0.0.1:5000/static/slide_files/' + file_fn
     converted_folder = 'medicospdf/static/slide_files'
     output_path = os.path.join(os.getcwd() + '/') + converted_folder + '/' + file_fn
     print(output_path)
@@ -30,14 +30,15 @@ def save_file(form_file):
     return file_conv, random_hex
 
 
-
 @app.route("/", methods = ['GET', 'POST'])
 @app.route("/home", methods = ['GET', 'POST'])
 @login_required
 def home():
     cat = Category.query.all()
     page = request.args.get('page', 1, type = int)
-    slides = Slide.query.order_by(Slide.date_posted.desc()).paginate(page = page, per_page = 6)
+    # slides = Slide.query.order_by(Slide.date_posted.desc()).paginate(page = page, per_page = 6)
+    # slides = Slide.query.join(followers, (followers.c.followed_id == Slide.user_id)).filter(followers.c.follower_id == self.id).order_by(Slide.date_posted.desc()).paginate(page = page, per_page = 6)
+    slides = current_user.followed_posts().paginate(page = page, per_page = 6)
     if request.method == 'POST' and 'tag' in request.form:
         tag = request.form['tag']
         search = '%{}%'.format(tag)
@@ -134,25 +135,26 @@ def new_slide():
             return redirect(url_for('new_slide'))
     return render_template('create_slide.html', title = 'Add New Slide', form = form, categories = cat)
 
-@app.route('/download/<path>')
-def download(path = None):
-    if path is None:
-        self.Error(400)
-    try:
-        return send_file(path, as_attachment = True)
-    except Exception as e:
-        self.log.exception(e)
-        self.Error(400)
+@app.route('/download/<name>')
+def download(name):
+    path = 'static/slide_files/' + name
+    return send_file(path, as_attachment = True)
+
+
 
 @app.route('/logout')
 def logout():
     logout_user()
     return redirect(url_for('home'))
 
-@app.route('/account')
+@app.route('/account/<username>')
 @login_required
-def account():
-    return render_template('account.html', title = 'Account')
+def account(username):
+    user = User.query.filter_by(username = username).first()
+    if user is None:
+        flash('User %s is not found.', username)
+        return redirect(url_for('home'))
+    return render_template('account.html', user = user, title = 'Account')
 
 @app.route('/explore')
 def explore():
@@ -164,3 +166,36 @@ def category(name):
     cats = Category.query.all()
     cat = Category.query.filter_by(name = name).first_or_404()
     return render_template('category.html', name = name, posts = cat.slides, categories = cats)
+
+
+@app.route('/follow/<username>')
+def follow(username):
+    user = User.query.filter_by(username = username).first()
+    # if user in None:
+    #     flash('User %s is not found.', username)
+    #     return redirect(url_for('home'))
+    if user == current_user:
+        flash('Your can\'t follow yourself!')
+        return redirect(url_for('account', username = user.username))
+    u = current_user.follow(user)
+    # if u is None:
+    #     flash('Cannot follow' + username + '.')
+    #     return redirect(url_for('account', username = user.username))
+    db.session.add(u)
+    db.session.commit()
+    flash('You are following ' + username + '!')
+    return redirect(url_for('account', username = user.username))
+
+@app.route('/unfollow/<username>')
+def unfollow(username):
+    user = User.query.filter_by(username = username).first()
+    u = current_user.unfollow(user)
+    if u is None:
+        flash('Cannot unfollow ' + username + '.')
+        return redirect(url_for('account', username=user.username))
+
+    db.session.add(u)
+    db.session.commit()
+    flash('You have stopped following ' + username + '.')
+    return redirect(url_for('account', username = user.username))
+

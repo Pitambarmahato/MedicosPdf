@@ -51,12 +51,18 @@
             <div class="navbar-nav mr-auto">
               <a class="nav-item nav-link" href="{{ url_for('home') }}">Home</a>
               <a class="nav-item nav-link" href="{{ url_for('about') }}">About</a>
-            </div>
-            <div class="navbar-nav form-group">
-              <form action="" method="POST" autocomplete="off">
-                <input type="text" name="tag" id = 'tag' placeholder="Search">
-                <input type="submit" name="" value="Search" class="btn btn-primary">
-              </form>
+              {% if current_user.is_authenticated %}
+                <div class="navbar-nav form-group">
+                  <form action="" method="POST" autocomplete="off" class="form-inline">
+                    <div class="form-group mx-sm-3 mb-2">
+                      <input type="text" name="tag" id = 'tag' placeholder="Search" class="form-control">
+                    </div>
+                    <div class="form-group mx-sm-3 mb-2">
+                      <input type="submit" name="search" value="Search" class="btn btn-primary" class="btn btn-primary mb-2">
+                    </div>
+                  </form>
+                </div>
+              {% endif %}
             </div>
             <!-- Navbar Right Side -->
             <div class="navbar-nav">

@@ -1,4 +1,13 @@
 {% extends 'layout.html' %}  
 {% block content %}
-	<h1>{{ current_user.username }}</h1>
+	<h2>User: {{ user.username }}</h2>
+	<p>{{ user.followers.count() }} followers |
+		{% if user == current_user %}
+			<a href="#">Edit your profile</a>
+		{% elif not current_user.is_following(user) %}
+			<a href="{{ url_for('follow', username = user.username) }}">Follow</a>
+		{% else %}
+			<a href="{{ url_for('unfollow', username = user.username) }}">Unfollow</a>
+		{% endif %}
+	</p>
 {% endblock %}
