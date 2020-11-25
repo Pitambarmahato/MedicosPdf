@@ -1,22 +1,68 @@
 {% extends 'layout.html' %}
 {% block content %}
 	<article class="media content-section">
+		<img class="rounded-circle article-img" src="{{ url_for('static', filename = 'profile_pics/' + slide.author.image_file) }}">
 		<div class="media-body">
 			<div class="article-metadata">
 				<a class="mr-2" href="#">{{ slide.author.username }}</a>
 
 				<h2 class="article-title">{{ slide.title }}</h2>
-				<div style = {height:400px; width:200px} id = 'viewpdf'></div>
+				<div style = "height:350px; width:620px" id = 'viewpdf'></div>
 			</div>
-			<div class="article-content">{{ slide.description }}</div>
+			<div class="row">
+				<div class="col-3">
+					<div class = like-comment-div>
+						{% if current_user.has_liked_slide(slide) %}
+						    <a href="{{ url_for('like_action', slide_id = slide.id, action = 'unlike') }}"><i class="fa fa-heart"></i></a>
+						  {% else %}
+						    <a href="{{ url_for('like_action', slide_id = slide.id, action = 'like') }}"><i class="fa fa-heart-o"></i></a>
+						  {% endif %}
+					</div>
+				  
+				  <p>{{ slide.likes|count }} likes</p>
+				</div>
+	            <div class="col-3">
+	              <a href="{{ url_for('download', name = slide.file) }}">
+	              <i class="fa fa-download"></i></a>
+	              <p style="margin-left: -20px">download</p>
+	            </div>
+	            <div class="col-3">
+	            	<i class="fa fa-share"></i>
+	            	<p>share</p>
+	            </div>
+	            <div class="col-3">
+	            	<i class="fa fa-eye"></i>
+	            	<p>{{ visitors.count }}</p>
+	            </div>
+          	</div>
+
+			<div class="article-content text-justify"><p><b>About Slide:&nbsp;</b>{{ slide.description }}</p></div>
 			<div class="article-content"><p>Category:&nbsp; {{ slide.cats.name }}</p></div>
-            {% if current_user.has_liked_slide(slide) %}
-              <a href="{{ url_for('like_action', slide_id = slide.id, action = 'unlike') }}"><i class="fa fa-heart"></i></a>
-            {% else %}
-              <a href="{{ url_for('like_action', slide_id = slide.id, action = 'like') }}"><i class="fa fa-heart-o"></i></a>
-            {% endif %}
-            <p>{{ slide.likes|count }} likes</p>
-            <form method="POST" action="">
+			<p><b>{{ slide.comments|count }} comments</b></p><hr>
+			{% for comment in comments.items %}
+				<div class="article-metadata">
+					<img class="rounded-circle article-img" src="{{ url_for('static', filename = 'profile_pics/'+comment.author.image_file) }}">
+					<a class="mr-2" href="#">{{ comment.author.username }}</a>
+					<p class="article-comment">{{ comment.comment }}</p>
+				</div>
+			{% endfor %}
+			<div class="row">
+				<div class="col">
+					{% if comments.has_prev %}
+				      <a class ="btn btn-outline-info" href="{{ url_for('slide', slide_id = slide.id,  page=comments.prev_num) }}">&lt;&lt;</a>
+				    {% else %}
+				      <button class="btn btn-outline-info disabled">&lt;</button>
+				    {% endif %}
+				</div>
+			    <div class="col-3">
+				    {% if comments.has_next %}
+				    	<a class="btn btn-outline-info" href="{{ url_for('slide',slide_id = slide.id, page=comments.next_num) }}">&gt;&gt;</a>
+				    {% else %}
+				    	<button class="btn btn-outline-info disabled">&gt;</button>
+				    {% endif %}
+			    </div>
+			</div>
+			<form method="POST" action="">
 				{{ form.hidden_tag() }}
 				<fieldset class="form-group">
 					<legend class="border-bottom mb-4">{{ comment }}</legend>
@@ -41,24 +87,13 @@
 
 				</fieldset>
 			</form>
-			{% for comment in comments %}
-				<div class="article-metadata">
-					<a class="mr-2" href="#">{{ comment.author.username }}</a>
-
-					<p class="article-comment">{{ comment.comment }}</p>
-				</div>
-
-			{% endfor %}
-
 		</div>
 	</article>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfobject/2.1.1/pdfobject.min.js"></script>
+	<script src="{{ url_for('static', filename = 'pdfobject.min.js') }}"></script>
     <script src="https://code.jquery.com/jquery-2.2.4.min.js"></script>
     <script type="text/javascript">
     	var viewer = $('#viewpdf');
-    	var slide_name = '{{url_for('static', filename = 'slide_files/'+ slide.file) }}';
+    	var slide_name = '{{ url_for('static', filename = 'slide_files/'+ slide.file) }}';
     	PDFObject.embed(slide_name, viewer);
-    </script>
-
-
-{% endblock %}
+</script>
+    {% endblock %}

@@ -1,13 +1,27 @@
 {% extends 'layout.html' %}  
 {% block content %}
-	<h2>User: {{ user.username }}</h2>
-	<p>{{ user.followers.count() }} followers |
-		{% if user == current_user %}
-			<a href="#">Edit your profile</a>
-		{% elif not current_user.is_following(user) %}
-			<a href="{{ url_for('follow', username = user.username) }}">Follow</a>
-		{% else %}
-			<a href="{{ url_for('unfollow', username = user.username) }}">Unfollow</a>
-		{% endif %}
-	</p>
+
+	<div class="content-section">
+	  	<div class="media">
+	        <img class="rounded-circle account-img" src="{{ url_for('static', filename = 'profile_pics/' + user.image_file) }}">
+	        <div class="media-body">
+		        <h2 class="account-heading">{{ user.username }}</h2>
+		        <p class="text-secondary">{{ user.email }}</p>
+				<p>{{ user.followers.count() }} followers |
+					{% if user == current_user %}
+						<a href="#">Edit your profile</a>
+					{% elif not current_user.is_following(user) %}
+						<a href="{{ url_for('follow', username = user.username) }}">Follow</a>
+					{% else %}
+						<a href="{{ url_for('unfollow', username = user.username) }}">Unfollow</a>
+					{% endif %}
+				</p>
+	        </div>
+	  	</div>
+	  	<div>
+	  		{% for slide in slides %}
+	  			<a href="{{ url_for('slide', slide_id = slide.id) }}">{{ slide.title }}</a>
+	  		{% endfor %}
+	  	</div>
+	</div>
 {% endblock %}

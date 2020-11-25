@@ -2,6 +2,7 @@
 {% block content %}
     {% for slide in posts %}
         <article class="media content-section">
+          <img class="rounded-circle article-img" src="{{ url_for('static', filename = 'profile_pics/' + slide.author.image_file) }}">
           <div class="media-body">
             <div class="article-metadata">
               <a class="mr-2" href="{{ url_for('account', username = slide.author.username) }}">{{ slide.author.username }}</a>

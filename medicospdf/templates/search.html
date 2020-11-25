@@ -1,37 +1,6 @@
-{% extends "layout.html" %}
-  /* Style buttons */
-  .btn {
-    background-color: DodgerBlue;
-    border: none;
-    color: white;
-    padding: 12px 30px;
-    cursor: pointer;
-    font-size: 20px;
-  }
-  .fa{
-    font-size: 20px;
-  }
-
-  /* Darker background on mouse-over */
-  .btn:hover {
-    background-color: RoyalBlue;
-  }
-{% block search %}
-  {% if current_user.is_authenticated %}
-    <div class="navbar-nav form-group">
-      <form action=" " method="POST" autocomplete="off" class="form-inline">
-        <div class="form-group mx-sm-3 mb-2">
-          <input type="text" name="tag" id = 'tag' placeholder="Search" class="form-control">
-        </div>
-        <div class="form-group mx-sm-3 mb-2">
-          <input type="submit" name="search" value="Search" class="btn btn-primary" class="btn btn-primary mb-2">
-        </div>
-      </form>
-    </div>
-  {% endif %}
-{% endblock %}
+{% extends 'layout.html' %}
 {% block content %}
-    {% for slide in posts.items %}
+	{% for slide in posts %}
         <article class="media content-section">
           <img class="rounded-circle article-img" src="{{ url_for('static', filename = 'profile_pics/' + slide.author.image_file) }}">
           <div class="media-body">
@@ -43,7 +12,7 @@
             <div class="container">
               <div class="row">
                 <div class="col">
-                  <iframe name="plugin" src="{{ url_for('static', filename = 'slide_files/'+ slide.file) }}" type="application/pdf" width="250" height="215"></iframe>
+                  <iframe name="plugin" src="{{ url_for('static', filename = 'slide_files/'+ slide.file) }}" type="application/pdf" width="300" height="215"></iframe>
                   <div class="row">
                     <div class="col">
                       {% if current_user.has_liked_slide(slide) %}
@@ -60,20 +29,13 @@
                   </div>
                 </div>
                 <div class="col">
-                  <p class="article-content text-justify">{{ slide.description | truncate(300)}}<a href="{{ url_for('slide', slide_id = slide.id) }}">show more</a></p>
+                  <p class="article-content">{{ slide.description | truncate(300)}}<a href="{{ url_for('slide', slide_id = slide.id) }}">show more</a></p>
                 </div>
               </div>
 <!--               <a href="{{ url_for('download', name = slide.file) }}">download</a>
  -->
             </div>            
           </div>
-        </article>
+        </article>	
     {% endfor %}
-    {% if posts.has_prev %}
-      <a href="{{ url_for('home', page=posts.prev_num) }}">&lt;&lt; Newer posts</a>
-    {% else %}
-      Newer posts
-    {% endif %} | 
-    {% if posts.has_next %}<a href="{{ url_for('home', page=posts.next_num) }}">Older posts &gt;&gt;</a>{% else %}Older posts &gt;&gt;{% endif %}
-
-{% endblock content %}
+{% endblock %}

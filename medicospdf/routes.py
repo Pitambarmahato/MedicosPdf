@@ -1,10 +1,11 @@
 from flask import render_template, url_for, flash, redirect, request, send_file, send_from_directory, g
-from medicospdf import app, db, bcrypt
-from medicospdf.forms import RegistrationForm, LoginForm, SlideForm, CommentForm, SearchForm
-from medicospdf.models import User, Post, Slide, Comment, Category, followers
+from medicospdf import app, db, bcrypt, mail
+from medicospdf.forms import RegistrationForm, LoginForm, SlideForm, CommentForm, SearchForm, RequestResetForm, ResetPasswordForm
+from medicospdf.models import User, Post, Slide, Comment, Category, followers, Visit
 from flask_login import login_user, current_user, logout_user, login_required
 import secrets
 import os
+from flask_mail import Message
 
 def convert_file(file_fn, random_hex):
     file_name = 'http://127.0.0.1:5000/static/slide_files/' + file_fn
@@ -29,6 +30,17 @@ def save_file(form_file):
     print(file_conv)
     return file_conv, random_hex
 
+def send_reset_email(user):
+    token = user.get_reset_token()
+    msg = Message('Password Reset Request', sender = 'noreply@demo.com', recipients = [user.email])
+    msg.body = f'''To reset your password visit the following link
+        {url_for('reset_token', token=token, _external = True)}
+
+        If you did not make this request then simply igonre this message and no changes will be made.
+        '''
+    mail.send(msg)
+
+
 
 @app.route("/", methods = ['GET', 'POST'])
 @app.route("/home", methods = ['GET', 'POST'])
@@ -38,12 +50,12 @@ def home():
     page = request.args.get('page', 1, type = int)
     # slides = Slide.query.order_by(Slide.date_posted.desc()).paginate(page = page, per_page = 6)
     # slides = Slide.query.join(followers, (followers.c.followed_id == Slide.user_id)).filter(followers.c.follower_id == self.id).order_by(Slide.date_posted.desc()).paginate(page = page, per_page = 6)
-    slides = current_user.followed_posts().paginate(page = page, per_page = 6)
+    slides = current_user.followed_posts().paginate(page = page, per_page = 2)
     if request.method == 'POST' and 'tag' in request.form:
         tag = request.form['tag']
         search = '%{}%'.format(tag)
-        slides = Slide.query.filter(Slide.title.like(search)).paginate(page=page, per_page = 6)
-        return render_template('home.html', posts = slides, categories = cat)
+        slides = Slide.query.filter(Slide.title.like(search))
+        return render_template('search.html', posts = slides, categories = cat)
 
     return render_template('home.html', posts=slides, categories = cat)
 
@@ -51,6 +63,14 @@ def home():
 def slide(slide_id):
     cat = Category.query.all()
     slide = Slide.query.get_or_404(slide_id)
+    v = Visit.query.filter_by(id = slide_id).first()
+    if not v:
+        v = Visit()
+        v.count += 1
+        db.session.add(v)
+    v.count += 1
+    db.session.commit()
+    print(v.count)
     form = CommentForm()
     if form.validate_on_submit():
         comment = Comment(comment = form.comment.data, author = current_user, slide_id = slide.id)
@@ -58,13 +78,14 @@ def slide(slide_id):
         db.session.commit()
         flash('Your comment has been posted.', 'success')
         return redirect(url_for('slide', slide_id = slide.id))
-    comments = Comment.query.filter_by(slide_id = slide.id).all()
+    page = request.args.get('page', 1, type = int)
+    comments = Comment.query.filter_by(slide_id = slide.id).paginate(page, per_page = 2)
     return render_template('slide.html', title = slide.title, 
                         slide = slide, comments = comments, 
-                        form = form, legend = Slide, categories = cat)
+                        form = form, legend = Slide, categories = cat, visitors = v)
 
 
-@app.route('/like/<int:slide_id>/<action>')
+@app.route('/like/<int:slide_id>/<action>', methods = ['GET'])
 @login_required
 def like_action(slide_id, action):
     slide = Slide.query.filter_by(id=slide_id).first_or_404()
@@ -74,7 +95,7 @@ def like_action(slide_id, action):
     if action == 'unlike':
         current_user.unlike_slide(slide)
         db.session.commit()
-    return redirect(request.referrer)
+    return redirect(url_for('slide', slide_id = slide.id))
 
 
 @app.route("/about")
@@ -154,12 +175,14 @@ def account(username):
     if user is None:
         flash('User %s is not found.', username)
         return redirect(url_for('home'))
-    return render_template('account.html', user = user, title = 'Account')
+    slides = user.slides
+    return render_template('account.html', user = user, slides = slides, title = 'Account')
 
 @app.route('/explore')
 def explore():
-    cat = Category.query.all()
-    return render_template('explore.html', categories = cat)
+    page = request.args.get('page', 1, type = int)
+    slides = Slide.query.order_by(Slide.date_posted.desc()).paginate(page = page, per_page = 10)
+    return render_template('explore.html', slides = slides)
 
 @app.route('/category/<name>')
 def category(name):
@@ -183,7 +206,7 @@ def follow(username):
     #     return redirect(url_for('account', username = user.username))
     db.session.add(u)
     db.session.commit()
-    flash('You are following ' + username + '!')
+    flash('You are following ' + username + '!', 'success')
     return redirect(url_for('account', username = user.username))
 
 @app.route('/unfollow/<username>')
@@ -193,9 +216,37 @@ def unfollow(username):
     if u is None:
         flash('Cannot unfollow ' + username + '.')
         return redirect(url_for('account', username=user.username))
-
     db.session.add(u)
     db.session.commit()
-    flash('You have stopped following ' + username + '.')
+    flash('You have stopped following ' + username + '.', 'danger')
     return redirect(url_for('account', username = user.username))
 
+
+@app.route('/reset_password', methods = ['GET', 'POST'])
+def reset_request():
+    if current_user.is_authenticated:
+        return redirect(url_for('home'))
+    form = RequestResetForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(email = form.email.data).first()
+        send_reset_email(user)
+        flash('An email has been sent with instructions to reset your password.')
+        return redirect(url_for('login'))
+    return render_template('reset_request.html', title = 'Reset Request', form = form)
+
+@app.route('/reset_password/<token>', methods = ['GET', 'POST'])
+def reset_token(token):
+    if current_user.is_authenticated:
+        return redirect(url_for('home'))
+    user = User.verify_reset_token(token)
+    if user is None:
+        flash('That is an invalid or expired token', 'warning')
+        return redirect(url_for('reset_request'))
+    form = ResetPasswordForm()
+    if form.validate_on_submit():
+        hashed_password = bcrypt.generate_password_hash(form.password.data).decode('utf-8')
+        user.password = hashed_password
+        db.session.commit()
+        flash(f'Your password has been Updated! You are now able to log in', 'success')
+        return redirect(url_for('login')) 
+    return render_template('reset_token.html', title = 'Reset Password', form = form)

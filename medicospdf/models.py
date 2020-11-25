@@ -2,6 +2,7 @@ from flask import abort
 from datetime import datetime
 from medicospdf import db, login_manager, app
 from flask_login import UserMixin, current_user
+from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from flask_admin import Admin
 from flask_admin.contrib.sqla import ModelView
 import os
@@ -18,6 +19,15 @@ followers = db.Table('followers',
     db.Column('follower_id', db.Integer, db.ForeignKey('user.id')),
     db.Column('followed_id', db.Integer, db.ForeignKey('user.id'))
 )
+
+class Visit(db.Model):
+    id = db.Column(db.Integer, primary_key = True)
+    count = db.Column(db.Integer)
+    # slides = db.relationship('Slide', backref = 'slide', lazy = True)
+
+    def __init__(self):
+        self.count = 0
+
 
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
@@ -37,6 +47,22 @@ class User(db.Model, UserMixin):
                                 secondaryjoin = (followers.c.followed_id == id),
                                 backref = db.backref('followers', lazy = 'dynamic'),
                                 lazy = 'dynamic')
+
+    
+    def get_reset_token(self, expires_sec=1800):
+        s = Serializer(app.config['SECRET_KEY'], expires_sec)
+        return s.dumps({'user_id': self.id}).decode('utf-8')
+
+    @staticmethod
+    def verify_reset_token(token):
+        s = Serializer(app.config['SECRET_KEY'])
+        try:
+            user_id = s.loads(token)['user_id']
+        except:
+            return None
+        return User.query.get(user_id)
+
+
 
 
     def like_slide(self, slide):
@@ -98,7 +124,7 @@ class Slide(db.Model):
     likes = db.relationship('SlideLike', backref = 'slide', lazy = True)
     comments = db.relationship('Comment', backref = 'slide', lazy = True)
     category_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable = True)
-
+    # visit_id = db.Column(db.Integer, db.ForeignKey('visit.id'), nullable = True)
     def __repr__(self):
         return f"Slide('{self.title}', '{self.description}', '{self.file}')"
 
