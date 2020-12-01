@@ -11,15 +11,14 @@
 			</div>
 			<div class="row">
 				<div class="col-3">
-					<div class = like-comment-div>
-						{% if current_user.has_liked_slide(slide) %}
-						    <a href="{{ url_for('like_action', slide_id = slide.id, action = 'unlike') }}"><i class="fa fa-heart"></i></a>
-						  {% else %}
-						    <a href="{{ url_for('like_action', slide_id = slide.id, action = 'like') }}"><i class="fa fa-heart-o"></i></a>
-						  {% endif %}
-					</div>
-				  
-				  <p>{{ slide.likes|count }} likes</p>
+					<div class="like-comment-div">
+				        {% if current_user.has_liked_slide(slide) %}
+				            <a class="liked btn btn-primary" id = 'unlike' data-slide-id="{{ slide.id }}" data-action="like">Liked</a>
+				        {% else %}
+				            <a class="not-like btn btn-primary" id = 'like' data-slide-id="{{ slide.id }}" data-action="like">Like</a>                    
+				        {% endif %}
+				        <p id = 'likeCount'>{{ slide.likes | count }}</p>
+				    </div>
 				</div>
 	            <div class="col-3">
 	              <a href="{{ url_for('download', name = slide.file) }}">
@@ -43,7 +42,9 @@
 				<div class="article-metadata">
 					<img class="rounded-circle article-img" src="{{ url_for('static', filename = 'profile_pics/'+comment.author.image_file) }}">
 					<a class="mr-2" href="#">{{ comment.author.username }}</a>
-					<p class="article-comment">{{ comment.comment }}</p>
+					<span>
+						<p class="text text-justify">{{ comment.comment }}</p>
+					</span>
 				</div>
 			{% endfor %}
 			<div class="row">
@@ -89,11 +90,48 @@
 			</form>
 		</div>
 	</article>
+    <script src="http://code.jquery.com/jquery.js"></script>
+    <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
 	<script src="{{ url_for('static', filename = 'pdfobject.min.js') }}"></script>
-    <script src="https://code.jquery.com/jquery-2.2.4.min.js"></script>
+    <script src="http://code.jquery.com/jquery.js"></script>
+    <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
     <script type="text/javascript">
-    	var viewer = $('#viewpdf');
+        $(document).ready(function(){
+          $(".like-comment-div > a").click(function(e) {
+                e.preventDefault();  
+
+                let action = $(".like-comment-div > a").data("action");
+                let slide_id = $(".like-comment-div > a").data("slide-id");
+
+                $.ajax({
+                    type: "GET",
+                    url: "/like",
+                    data: {
+                        action: action,
+                        slide_id: slide_id,
+                    },
+                    success: function(data){
+
+                            // $("#like_" + slide_id).text(data.text);        // setting likes
+                            // $("#unlike_" + slide_id).text(data.text);    // setting unlikes
+                            $('#like').text(data.text);
+                            $('#unlike').text(data.text);
+                            $('#likeCount').text(data.like);
+                    },
+                    error: function(){
+                        alert('error')
+                    }
+                    
+                });
+            });
+        });
+
+        var viewer = $('#viewpdf');
     	var slide_name = '{{ url_for('static', filename = 'slide_files/'+ slide.file) }}';
     	PDFObject.embed(slide_name, viewer);
-</script>
-    {% endblock %}
+
+    </script>
+
+{% endblock %}
+

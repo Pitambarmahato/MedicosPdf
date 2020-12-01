@@ -1,6 +1,82 @@
 {% extends 'layout.html' %}
 {% block content %}
-	{% for slide in slides.items %}
-		<p>{{ slide.title }}</p>
-	{% endfor %}
+    {% for slide in posts.items %}
+        <article class="media content-section">
+          <img class="rounded-circle article-img" src="{{ url_for('static', filename = 'profile_pics/' + slide.author.image_file) }}">
+          <div class="media-body">
+            <div class="article-metadata">
+              <a class="mr-2" href="{{ url_for('account', user_id = slide.author.id) }}">{{ slide.author.username }}</a>
+              <small class="text-muted">{{ slide.date_posted.strftime('%Y-%m-%d') }}</small>
+            </div>
+            <h2><a class="article-title" href="{{url_for('slide', slide_id = slide.id)}}">{{ slide.title }}</a></h2>
+            <div class="container">
+              <div class="row">
+                <div class="col">
+                  <iframe name="plugin" src="{{ url_for('static', filename = 'slide_files/'+ slide.file) }}" type="application/pdf" width="250" height="215"></iframe>
+                  <div class="row">
+                    <div class="col">
+                      {% if current_user.has_liked_slide(slide) %}
+                       <a class="unlike btn btn-primary" id="like_{{slide.id}}">Liked</a>
+                      {% else %}
+                        <a class="like btn btn-primary" id="like_{{slide.id}}">Like</a>
+                      {% endif %}
+                      <p id = "likeCount_{{slide.id}}">{{ slide.likes | count }}</p>
+                    </div>
+                    <div class="col">
+                      <a href="{{ url_for('download', name = slide.file) }}">
+                      <i class="fa fa-download"></i></a>
+                    </div>
+                  </div>
+                </div>
+                <div class="col">
+                  <p class="article-content text-justify">{{ slide.description | truncate(300)}}<a href="{{ url_for('slide', slide_id = slide.id) }}">show more</a></p>
+                </div>
+              </div>
+<!--               <a href="{{ url_for('download', name = slide.file) }}">download</a>
+ -->
+            </div>            
+          </div>
+        </article>
+    {% endfor %}
+    {% if posts.has_prev %}
+      <a href="{{ url_for('explore', page=posts.prev_num) }}">&lt;&lt; Newer posts</a>
+    {% else %}
+      Newer posts
+    {% endif %} | 
+    {% if posts.has_next %}<a href="{{ url_for('explore', page=posts.next_num) }}">Older posts &gt;&gt;</a>{% else %}Older posts &gt;&gt;{% endif %}
+
+
+    <script src="http://code.jquery.com/jquery.js"></script>
+    <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+
+      <script type="text/javascript">
+          $(document).ready(function(){
+              $(".like, .unlike").click(function(e){
+                  e.preventDefault();
+                  var id = this.id;  
+                  var split_id = id.split("_");
+
+                  var text = split_id[0];
+                  var slide_id = split_id[1];
+
+                  $.ajax({
+                      url: '/like',
+                      type: 'GET',
+                      data: {
+                        slide_id:slide_id,
+                        action:text},
+                      success: function(data){
+
+                          $("#like_"+slide_id).text(data.text);        // setting likes
+                          $("#unlike_"+slide_id).text(data.text);    // setting unlikes
+                          $("#likeCount_"+slide_id).text(data.like);
+                      },
+                      error: function(){
+                        alert('error')
+                      }
+                  });
+              });
+          });
+      </script>
 {% endblock %}

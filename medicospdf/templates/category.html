@@ -1,6 +1,6 @@
 {% extends 'layout.html' %}
 {% block content %}
-    {% for slide in posts %}
+    {% for slide in posts.items %}
         <article class="media content-section">
           <img class="rounded-circle article-img" src="{{ url_for('static', filename = 'profile_pics/' + slide.author.image_file) }}">
           <div class="media-body">
@@ -28,4 +28,19 @@
             </div>            
           </div>
         </article>
-    {% endfor %}{% endblock %}
+    {% endfor %}
+
+    {% if posts.has_prev %}
+      <a href="{{ url_for('category',cat_id = cat.id, page=posts.prev_num) }}">&lt;&lt; Newer posts</a>
+    {% else %}
+      Newer posts
+    {% endif %} | 
+    {% if posts.has_next %}
+      <a href="{{ url_for('category', cat_id = cat.id, page=posts.next_num) }}">Older posts &gt;&gt;
+      </a>
+    {% else %}
+      Older posts &gt;&gt;
+    {% endif %}
+
+
+    {% endblock %}

@@ -19,9 +19,55 @@
 	        </div>
 	  	</div>
 	  	<div>
-	  		{% for slide in slides %}
-	  			<a href="{{ url_for('slide', slide_id = slide.id) }}">{{ slide.title }}</a>
+	  		{% for slide in slides.items %}
+				<article class="media content-section">
+		          <img class="rounded-circle article-img" src="{{ url_for('static', filename = 'profile_pics/' + slide.author.image_file) }}">
+		          <div class="media-body">
+		            <div class="article-metadata">
+		              <a class="mr-2" href="{{ url_for('account', user_id = slide.author.id) }}">{{ slide.author.username }}</a>
+		              <small class="text-muted">{{ slide.date_posted.strftime('%Y-%m-%d') }}</small>
+		            </div>
+		            <h2><a class="article-title" href="{{url_for('slide', slide_id = slide.id)}}">{{ slide.title }}</a></h2>
+		            <div class="container">
+		              <div class="row">
+		                <div class="col">
+		                  <iframe name="plugin" src="{{ url_for('static', filename = 'slide_files/'+ slide.file) }}" type="application/pdf" width="250" height="215"></iframe>
+		                  <div class="row">
+		                    <div class="col">
+		                      {% if current_user.has_liked_slide(slide) %}
+		                       <a class="unlike btn btn-primary" id="like_{{slide.id}}">Liked</a>
+		                      {% else %}
+		                        <a class="like btn btn-primary" id="like_{{slide.id}}">Like</a>
+		                      {% endif %}
+		                      <p id = "likeCount_{{slide.id}}">{{ slide.likes | count }}</p>
+		                    </div>
+		                    <div class="col">
+		                      <a href="{{ url_for('download', name = slide.file) }}">
+		                      <i class="fa fa-download"></i></a>
+		                    </div>
+		                  </div>
+		                </div>
+		                <div class="col">
+		                  <p class="article-content text-justify">{{ slide.description | truncate(300)}}<a href="{{ url_for('slide', slide_id = slide.id) }}">show more</a></p>
+		                </div>
+		              </div>
+		            </div>            
+		          </div>
+		        </article>
 	  		{% endfor %}
+
+		  	{% if slides.has_prev %}
+		      <a href="{{ url_for('account',user_id = user.id, page=slides.prev_num) }}">&lt;&lt; Newer slides</a>
+		    {% else %}
+		      Newer slides
+		    {% endif %} | 
+		    {% if slides.has_next %}
+		      <a href="{{ url_for('account', user_id = user.id, page=slides.next_num) }}">Older slides &gt;&gt;
+		      </a>
+		    {% else %}
+		      Older slides &gt;&gt;
+		    {% endif %}
+
 	  	</div>
 	</div>
 {% endblock %}

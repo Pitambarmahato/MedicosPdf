@@ -1,4 +1,4 @@
-from flask import render_template, url_for, flash, redirect, request, send_file, send_from_directory, g
+from flask import render_template, url_for, flash, redirect, request, jsonify, send_file, send_from_directory, g
 from medicospdf import app, db, bcrypt, mail
 from medicospdf.forms import RegistrationForm, LoginForm, SlideForm, CommentForm, SearchForm, RequestResetForm, ResetPasswordForm
 from medicospdf.models import User, Post, Slide, Comment, Category, followers, Visit
@@ -48,8 +48,6 @@ def send_reset_email(user):
 def home():
     cat = Category.query.all()
     page = request.args.get('page', 1, type = int)
-    # slides = Slide.query.order_by(Slide.date_posted.desc()).paginate(page = page, per_page = 6)
-    # slides = Slide.query.join(followers, (followers.c.followed_id == Slide.user_id)).filter(followers.c.follower_id == self.id).order_by(Slide.date_posted.desc()).paginate(page = page, per_page = 6)
     slides = current_user.followed_posts().paginate(page = page, per_page = 2)
     if request.method == 'POST' and 'tag' in request.form:
         tag = request.form['tag']
@@ -70,7 +68,6 @@ def slide(slide_id):
         db.session.add(v)
     v.count += 1
     db.session.commit()
-    print(v.count)
     form = CommentForm()
     if form.validate_on_submit():
         comment = Comment(comment = form.comment.data, author = current_user, slide_id = slide.id)
@@ -79,23 +76,27 @@ def slide(slide_id):
         flash('Your comment has been posted.', 'success')
         return redirect(url_for('slide', slide_id = slide.id))
     page = request.args.get('page', 1, type = int)
-    comments = Comment.query.filter_by(slide_id = slide.id).paginate(page, per_page = 2)
+    comments = Comment.query.filter_by(slide_id = slide.id).paginate(page, per_page = 50)
     return render_template('slide.html', title = slide.title, 
                         slide = slide, comments = comments, 
                         form = form, legend = Slide, categories = cat, visitors = v)
 
 
-@app.route('/like/<int:slide_id>/<action>', methods = ['GET'])
+@app.route('/like', methods = ['GET'])
 @login_required
-def like_action(slide_id, action):
-    slide = Slide.query.filter_by(id=slide_id).first_or_404()
-    if action == 'like':
-        current_user.like_slide(slide)
-        db.session.commit()
-    if action == 'unlike':
-        current_user.unlike_slide(slide)
-        db.session.commit()
-    return redirect(url_for('slide', slide_id = slide.id))
+def like_action():
+    if request.args['action'] == 'like':
+        slide = Slide.query.filter_by(id=request.args['slide_id']).first_or_404()
+        if current_user.has_liked_slide(slide):
+            current_user.unlike_slide(slide)
+            db.session.commit()
+            like = len(slide.likes)
+            return jsonify({'status':'unlike', 'like':like, 'text':'Like'})
+        else:
+            current_user.like_slide(slide)
+            db.session.commit()
+            like = len(slide.likes)
+            return jsonify({"status": 'liked', 'like':like, 'text':'Liked'})
 
 
 @app.route("/about")
@@ -168,27 +169,30 @@ def logout():
     logout_user()
     return redirect(url_for('home'))
 
-@app.route('/account/<username>')
+@app.route('/account/<int:user_id>')
 @login_required
-def account(username):
-    user = User.query.filter_by(username = username).first()
+def account(user_id):
+    page = request.args.get('page', 1, type = int)
+    user = User.query.filter_by(id = user_id).first_or_404()
+    get_user_prod = Slide.query.filter_by(user_id = user.id).paginate(page = page, per_page = 2)
     if user is None:
         flash('User %s is not found.', username)
         return redirect(url_for('home'))
-    slides = user.slides
-    return render_template('account.html', user = user, slides = slides, title = 'Account')
+    return render_template('account.html', user = user, slides = get_user_prod, title = 'Account')
 
 @app.route('/explore')
 def explore():
     page = request.args.get('page', 1, type = int)
     slides = Slide.query.order_by(Slide.date_posted.desc()).paginate(page = page, per_page = 10)
-    return render_template('explore.html', slides = slides)
+    return render_template('explore.html', posts = slides)
 
-@app.route('/category/<name>')
-def category(name):
+@app.route('/category/<int:cat_id>')
+def category(cat_id):
+    page = request.args.get('page', 1, type = int)
     cats = Category.query.all()
-    cat = Category.query.filter_by(name = name).first_or_404()
-    return render_template('category.html', name = name, posts = cat.slides, categories = cats)
+    cat = Category.query.filter_by(id = cat_id).first_or_404()
+    get_cat_prod = Slide.query.filter_by(category_id = cat.id).paginate(page= page, per_page = 2)
+    return render_template('category.html', posts = get_cat_prod, categories = cats, cat = cat)
 
 
 @app.route('/follow/<username>')
@@ -250,3 +254,15 @@ def reset_token(token):
         flash(f'Your password has been Updated! You are now able to log in', 'success')
         return redirect(url_for('login')) 
     return render_template('reset_token.html', title = 'Reset Password', form = form)
+
+
+
+
+
+
+
+@app.route('/testing/<int:slide_id>')
+def testing(slide_id):
+    slide = Slide.query.get_or_404(slide_id)
+    print(len(slide.likes))
+    return render_template('testing.html', slide = slide)

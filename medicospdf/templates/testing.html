@@ -1,0 +1,80 @@
+{% extends 'layout.html' %}
+{% block content %}
+    <p>{{ slide.title }}</p>
+    <p class="text text-justify">
+        {{ slide.description }}
+    </p>
+    <a href="#" class="button">Read More</a> 
+
+    <div class="like-comment-div">
+        {% if current_user.has_liked_slide(slide) %}
+            <a class="liked btn btn-secondary" id = 'unlike' data-slide-id="{{ slide.id }}" data-action="like">Unlike</a>
+        {% else %}
+            <a class="not-like btn btn-primary" id = 'like' data-slide-id="{{ slide.id }}" data-action="like">Like</a>                    
+        {% endif %}
+        <p id = 'likeCount'>{{ slide.likes | count }}</p>
+    </div>
+    <script src="http://code.jquery.com/jquery.js"></script>
+    <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+    <script type="text/javascript">
+      var defaultHeight = 20; // height when "closed"
+      var text = $(".text");
+      var textHeight = text[0].scrollHeight; // the real height of the element
+      var button = $(".button");
+
+      text.css({"max-height": defaultHeight, "overflow": "hidden"});
+
+      button.on("click", function(){
+        var newHeight = 0;
+        if (text.hasClass("active")) {
+          newHeight = defaultHeight;
+          text.removeClass("active");
+          $('.button').text('Read More')
+        } else {
+          newHeight = textHeight;
+          text.addClass("active");
+          $('.button').text('Read Less')
+
+        }
+        text.animate({
+          "max-height": newHeight
+        }, 500);
+      });
+
+        $(document).ready(function(){
+          $(".like-comment-div > a").click(function(e) {
+                e.preventDefault();  
+
+                let action = $(".like-comment-div > a").data("action");
+                let slide_id = $(".like-comment-div > a").data("slide-id");
+
+                $.ajax({
+                    type: "GET",
+                    url: "/like",
+                    data: {
+                        action: action,
+                        slide_id: slide_id,
+                    },
+                    success: function(data){
+
+                            // $("#like_" + slide_id).text(data.text);        // setting likes
+                            // $("#unlike_" + slide_id).text(data.text);    // setting unlikes
+                            $('#like').text(data.text);
+                            $('#unlike').text(data.text);
+                            $('#likeCount').text(data.like);
+                    },
+                    error: function(){
+                        alert('error')
+                    }
+                    
+                });
+            });
+        });
+
+
+    </script>
+
+
+
+{% endblock %}
