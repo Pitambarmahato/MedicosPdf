@@ -5,7 +5,10 @@ from medicospdf.models import User, Post, Slide, Comment, Category, followers, V
 from flask_login import login_user, current_user, logout_user, login_required
 import secrets
 import os
+import datetime
 from flask_mail import Message
+from itsdangerous import URLSafeTimedSerializer
+from medicospdf.decorators import check_confirmed
 
 def convert_file(file_fn, random_hex):
     file_name = 'http://127.0.0.1:5000/static/slide_files/' + file_fn
@@ -40,11 +43,34 @@ def send_reset_email(user):
         '''
     mail.send(msg)
 
+def send_email(to, subject, template):
+    msg = Message(subject, recipients = [to], sender = app.config['MAIL_USERNAME'], html = template)
+    mail.send(msg)
+
+
+def generate_confirmation_token(email):
+    serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+    return serializer.dumps(email, salt=app.config['SECURITY_PASSWORD_SALT'])
+
+def confirm_token(token, expiration=3600):
+    serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+    try:
+        email = serializer.loads(
+            token,
+            salt=app.config['SECURITY_PASSWORD_SALT'],
+            max_age=expiration
+        )
+    except:
+        return False
+    return email
+
+
 
 
 @app.route("/", methods = ['GET', 'POST'])
 @app.route("/home", methods = ['GET', 'POST'])
 @login_required
+@check_confirmed
 def home():
     cat = Category.query.all()
     page = request.args.get('page', 1, type = int)
@@ -58,6 +84,8 @@ def home():
     return render_template('home.html', posts=slides, categories = cat)
 
 @app.route('/slide/<int:slide_id>', methods= ['GET', 'POST'])
+@login_required
+@check_confirmed
 def slide(slide_id):
     cat = Category.query.all()
     slide = Slide.query.get_or_404(slide_id)
@@ -84,6 +112,7 @@ def slide(slide_id):
 
 @app.route('/like', methods = ['GET'])
 @login_required
+@check_confirmed
 def like_action():
     if request.args['action'] == 'like':
         slide = Slide.query.filter_by(id=request.args['slide_id']).first_or_404()
@@ -100,6 +129,8 @@ def like_action():
 
 
 @app.route("/about")
+@login_required
+@check_confirmed
 def about():
     cat = Category.query.all()
     return render_template('about.html', title='About', categories = cat)
@@ -115,9 +146,55 @@ def register():
         user = User(username = form.username.data, email = form.email.data, password = hashed_password)
         db.session.add(user)
         db.session.commit()
-        flash(f'Account created for {form.username.data}!', 'success')
-        return redirect(url_for('login'))
+        token = generate_confirmation_token(user.email)
+        confirm_url = url_for('confirm_email', token = token, _external = True)
+        html = render_template('activate.html', confirm_url = confirm_url)
+        subject = "Please confirm your email."
+        send_email(user.email, subject, html)
+        login_user(user)
+        flash('A confirmation mail has been sent via email', 'success')
+        # flash(f'Account created for {form.username.data}!', 'success')
+        return redirect(url_for('unconfirmed'))
     return render_template('register.html', title='Register', form=form)
+
+
+@app.route('/confirm/<token>')
+@login_required
+def confirm_email(token):
+    try:
+        email = confirm_token(token)
+    except:
+        flash('The Confirmation line is invalid or has expired', 'danger')
+    user = User.query.filter_by(email = email).first_or_404()
+    if user.confirmed:
+        flash('Account already confirmed. Please Login.', 'success')
+    else: 
+        user.confirmed = True
+        user.confirmed_on = datetime.datetime.now()
+        db.session.add(user)
+        db.session.commit()
+        flash('You have confirmed your account. Thanks!', 'success')
+    return redirect(url_for('explore'))
+
+@app.route('/unconfirmed')
+@login_required
+def unconfirmed():
+    if current_user.confirmed:
+        return redirect('home')
+    flash('Please confirm your account!', 'warning')
+    return render_template('unconfirmed.html')
+
+@app.route('/resend')
+@login_required
+def resend_confirmation():
+    token = generate_confirmation_token(current_user.email)
+    confirm_url = url_for('confirm_email', token = token, _external = True)
+    html = render_template('activate.html', confirm_url=confirm_url)
+    subject = 'Please confirm your email.'
+    send_email(current_user.email, subject, html)
+    flash('A new confirmation email has been sent.', 'success')
+    return redirect(url_for('unconfirmed'))
+
 
 
 @app.route("/login", methods=['GET', 'POST'])
@@ -137,6 +214,7 @@ def login():
 
 @app.route('/slide/new', methods = ['GET', 'POST'])
 @login_required
+@check_confirmed
 def new_slide():
     form = SlideForm()
     cat = Category.query.all()
@@ -158,6 +236,8 @@ def new_slide():
     return render_template('create_slide.html', title = 'Add New Slide', form = form, categories = cat)
 
 @app.route('/download/<name>')
+@login_required
+@check_confirmed
 def download(name):
     path = 'static/slide_files/' + name
     return send_file(path, as_attachment = True)
@@ -171,6 +251,7 @@ def logout():
 
 @app.route('/account/<int:user_id>')
 @login_required
+@check_confirmed
 def account(user_id):
     page = request.args.get('page', 1, type = int)
     user = User.query.filter_by(id = user_id).first_or_404()
@@ -181,12 +262,16 @@ def account(user_id):
     return render_template('account.html', user = user, slides = get_user_prod, title = 'Account')
 
 @app.route('/explore')
+@login_required
+@check_confirmed
 def explore():
     page = request.args.get('page', 1, type = int)
     slides = Slide.query.order_by(Slide.date_posted.desc()).paginate(page = page, per_page = 10)
     return render_template('explore.html', posts = slides)
 
 @app.route('/category/<int:cat_id>')
+@login_required
+@check_confirmed
 def category(cat_id):
     page = request.args.get('page', 1, type = int)
     cats = Category.query.all()
@@ -196,6 +281,8 @@ def category(cat_id):
 
 
 @app.route('/follow/<username>')
+@login_required
+@check_confirmed
 def follow(username):
     user = User.query.filter_by(username = username).first()
     # if user in None:
@@ -203,7 +290,7 @@ def follow(username):
     #     return redirect(url_for('home'))
     if user == current_user:
         flash('Your can\'t follow yourself!')
-        return redirect(url_for('account', username = user.username))
+        return redirect(url_for('account', user_id = user.id))
     u = current_user.follow(user)
     # if u is None:
     #     flash('Cannot follow' + username + '.')
@@ -211,22 +298,25 @@ def follow(username):
     db.session.add(u)
     db.session.commit()
     flash('You are following ' + username + '!', 'success')
-    return redirect(url_for('account', username = user.username))
+    return redirect(url_for('account', user_id = user.id))
 
 @app.route('/unfollow/<username>')
+@login_required
+@check_confirmed
 def unfollow(username):
     user = User.query.filter_by(username = username).first()
     u = current_user.unfollow(user)
     if u is None:
         flash('Cannot unfollow ' + username + '.')
-        return redirect(url_for('account', username=user.username))
+        return redirect(url_for('account', user_id=user.id))
     db.session.add(u)
     db.session.commit()
     flash('You have stopped following ' + username + '.', 'danger')
-    return redirect(url_for('account', username = user.username))
+    return redirect(url_for('account', user_id = user.id))
 
 
 @app.route('/reset_password', methods = ['GET', 'POST'])
+@login_required
 def reset_request():
     if current_user.is_authenticated:
         return redirect(url_for('home'))
@@ -239,6 +329,7 @@ def reset_request():
     return render_template('reset_request.html', title = 'Reset Request', form = form)
 
 @app.route('/reset_password/<token>', methods = ['GET', 'POST'])
+@login_required
 def reset_token(token):
     if current_user.is_authenticated:
         return redirect(url_for('home'))
@@ -256,7 +347,12 @@ def reset_token(token):
     return render_template('reset_token.html', title = 'Reset Password', form = form)
 
 
-
+@app.route('/people')
+@login_required
+@check_confirmed
+def people():
+    users = User.query.all()
+    return render_template('people.html', users = users)
 
 
 

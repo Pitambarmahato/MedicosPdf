@@ -3,6 +3,7 @@ from datetime import datetime
 from medicospdf import db, login_manager, app
 from flask_login import UserMixin, current_user
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
+from itsdangerous import URLSafeTimedSerializer
 from flask_admin import Admin
 from flask_admin.contrib.sqla import ModelView
 import os
@@ -35,7 +36,10 @@ class User(db.Model, UserMixin):
     email = db.Column(db.String(120), unique=True, nullable=False)
     image_file = db.Column(db.String(20), nullable=False, default='default.jpg')
     password = db.Column(db.String(60), nullable=False)
+    registered_on = db.Column(db.DateTime, default = datetime.utcnow(), nullable = False)
     is_admin = db.Column(db.Boolean, default = False)
+    confirmed = db.Column(db.Boolean, nullable = False, default = False)
+    confirmed_on = db.Column(db.DateTime, nullable = True)
     posts = db.relationship('Post', backref='author', lazy=True)
     slides = db.relationship('Slide', backref = 'author', lazy = True)
     liked = db.relationship('SlideLike', foreign_keys = 'SlideLike.user_id', 

@@ -6,6 +6,14 @@
           <div class="media-body">
             <div class="article-metadata">
               <a class="mr-2" href="{{ url_for('account', user_id = slide.author.id) }}">{{ slide.author.username }}</a>
+	      		{% if slide.author == current_user %}
+					<a href="#">Edit your profile</a>
+				{% elif not current_user.is_following(slide.author) %}
+					<a href="{{ url_for('follow', username = slide.author.username) }}">Follow</a>
+				{% else %}
+					<a href="{{ url_for('unfollow', username = slide.author.username) }}">Unfollow</a>
+				{% endif %}
+				&nbsp;&nbsp;
               <small class="text-muted">{{ slide.date_posted.strftime('%Y-%m-%d') }}</small>
             </div>
             <h2><a class="article-title" href="{{url_for('slide', slide_id = slide.id)}}">{{ slide.title }}</a></h2>

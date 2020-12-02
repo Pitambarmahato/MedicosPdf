@@ -26,13 +26,12 @@
 	              <p style="margin-left: -20px">download</p>
 	            </div>
 	            <div class="col-3">
-	            	<i class="fa fa-share"></i>
-	            	<p>share</p>
-	            </div>
-	            <div class="col-3">
 	            	<i class="fa fa-eye"></i>
 	            	<p>{{ visitors.count }}</p>
 	            </div>
+          	</div>
+          	<div class="row text-justify">
+          		{{ share.create(title='Share with: ', align = 'center', mobile_sites = None) }}
           	</div>
 
 			<div class="article-content text-justify"><p><b>About Slide:&nbsp;</b>{{ slide.description }}</p></div>
