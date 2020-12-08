@@ -6,9 +6,11 @@ from medicospdf.models import User, Category
 
 categories = Category.query.all()
 mychoices = []
+print(mychoices)
 for cat in categories:
 	mychoices.append((cat.id, cat.name))
-print(mychoices)
+
+# mychoices = [('1', 'book'), ('2', 'read')]
 
 class RegistrationForm(FlaskForm):
 	username = StringField('Username', 
@@ -27,6 +29,19 @@ class RegistrationForm(FlaskForm):
 		user = User.query.filter_by(email=email.data).first()
 		if user:
 			raise ValidationError('That email is taken. Please choose a different one.')
+
+class UpdateUserForm(FlaskForm):
+	username = StringField('Username',
+		validators = [DataRequired(), Length(min = 2, max = 20)])
+	picture = FileField('Update Profile Picture',
+		validators = [FileAllowed(['jpg', 'png'])])
+	submit = SubmitField('Update')
+
+	def valid_username(self, username):
+		if username.data != current_user.username:
+			user = User.query.filter_by(username = username.data).first()
+			if user:
+				raise ValidationError('That Username is already taken. Please choose another one.')
 
 class LoginForm(FlaskForm):
 	email = StringField('Email', 

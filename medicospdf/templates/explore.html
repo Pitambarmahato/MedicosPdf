@@ -5,18 +5,18 @@
           <img class="rounded-circle article-img" src="{{ url_for('static', filename = 'profile_pics/' + slide.author.image_file) }}">
           <div class="media-body">
             <div class="article-metadata">
-              <a class="mr-2" href="{{ url_for('account', user_id = slide.author.id) }}">{{ slide.author.username }}</a>
+              <a class="mr-2" href="{{ url_for('users.account', user_id = slide.author.id) }}">{{ slide.author.username }}</a>
 	      		{% if slide.author == current_user %}
-					<a href="#">Edit your profile</a>
-				{% elif not current_user.is_following(slide.author) %}
-					<a href="{{ url_for('follow', username = slide.author.username) }}">Follow</a>
-				{% else %}
-					<a href="{{ url_for('unfollow', username = slide.author.username) }}">Unfollow</a>
-				{% endif %}
+    					<a href="#"></a>
+    				{% elif not current_user.is_following(slide.author) %}
+    					<a href="{{ url_for('users.follow', username = slide.author.username) }}">Follow</a>
+    				{% else %}
+    					<a href="{{ url_for('users.unfollow', username = slide.author.username) }}">Unfollow</a>
+    				{% endif %}
 				&nbsp;&nbsp;
               <small class="text-muted">{{ slide.date_posted.strftime('%Y-%m-%d') }}</small>
             </div>
-            <h2><a class="article-title" href="{{url_for('slide', slide_id = slide.id)}}">{{ slide.title }}</a></h2>
+            <h2><a class="article-title" href="{{url_for('slds.slide', slide_id = slide.id)}}">{{ slide.title }}</a></h2>
             <div class="container">
               <div class="row">
                 <div class="col">
@@ -31,27 +31,27 @@
                       <p id = "likeCount_{{slide.id}}">{{ slide.likes | count }}</p>
                     </div>
                     <div class="col">
-                      <a href="{{ url_for('download', name = slide.file) }}">
+                      <a href="{{ url_for('slds.download', name = slide.file) }}">
                       <i class="fa fa-download"></i></a>
                     </div>
                   </div>
                 </div>
                 <div class="col">
-                  <p class="article-content text-justify">{{ slide.description | truncate(300)}}<a href="{{ url_for('slide', slide_id = slide.id) }}">show more</a></p>
+                  <p class="article-content text-justify">{{ slide.description | truncate(300)}}<a href="{{ url_for('slds.slide', slide_id = slide.id) }}">show more</a></p>
                 </div>
               </div>
-<!--               <a href="{{ url_for('download', name = slide.file) }}">download</a>
+<!--               <a href="{{ url_for('slds.download', name = slide.file) }}">download</a>
  -->
             </div>            
           </div>
         </article>
     {% endfor %}
     {% if posts.has_prev %}
-      <a href="{{ url_for('explore', page=posts.prev_num) }}">&lt;&lt; Newer posts</a>
+      <a href="{{ url_for('main.explore', page=posts.prev_num) }}">&lt;&lt; Newer posts</a>
     {% else %}
       Newer posts
     {% endif %} | 
-    {% if posts.has_next %}<a href="{{ url_for('explore', page=posts.next_num) }}">Older posts &gt;&gt;</a>{% else %}Older posts &gt;&gt;{% endif %}
+    {% if posts.has_next %}<a href="{{ url_for('main.explore', page=posts.next_num) }}">Older posts &gt;&gt;</a>{% else %}Older posts &gt;&gt;{% endif %}
 
 
     <script src="http://code.jquery.com/jquery.js"></script>

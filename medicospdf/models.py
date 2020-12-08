@@ -35,7 +35,8 @@ class User(db.Model, UserMixin):
     username = db.Column(db.String(20), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     image_file = db.Column(db.String(20), nullable=False, default='default.jpg')
-    password = db.Column(db.String(60), nullable=False)
+    password = db.Column(db.String(200), nullable=False)
+    # password = db.Column(db.Binary(100), nullable = False)
     registered_on = db.Column(db.DateTime, default = datetime.utcnow(), nullable = False)
     is_admin = db.Column(db.Boolean, default = False)
     confirmed = db.Column(db.Boolean, nullable = False, default = False)
@@ -141,8 +142,9 @@ class SlideLike(db.Model):
 class Comment(db.Model):
     id = db.Column(db.Integer, primary_key= True)
     comment = db.Column(db.Text, nullable = False)
+    comment_date = db.Column(db.DateTime, default = datetime.utcnow)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable = False)
-    slide_id = db.Column(db.Integer, db.ForeignKey('slide.id'), nullable = False)
+    slide_id = db.Column(db.Integer, db.ForeignKey('slide.id'))
 
     def __repr__(self):
         return f"Comment('self.comment)')"
@@ -168,3 +170,4 @@ class Controller(ModelView):
 
 admin.add_view(Controller(User, db.session, endpoint = 'user'))
 admin.add_view(Controller(Category, db.session, endpoint = 'categories'))
+admin.add_view(Controller(Slide, db.session, endpoint = 'slides'))

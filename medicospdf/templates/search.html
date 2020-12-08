@@ -5,10 +5,10 @@
           <img class="rounded-circle article-img" src="{{ url_for('static', filename = 'profile_pics/' + slide.author.image_file) }}">
           <div class="media-body">
             <div class="article-metadata">
-              <a class="mr-2" href="{{ url_for('account', user_id = slide.author.id) }}">{{ slide.author.username }}</a>
+              <a class="mr-2" href="{{ url_for('users.account', user_id = slide.author.id) }}">{{ slide.author.username }}</a>
               <small class="text-muted">{{ slide.date_posted.strftime('%Y-%m-%d') }}</small>
             </div>
-            <h2><a class="article-title" href="{{url_for('slide', slide_id = slide.id)}}">{{ slide.title }}</a></h2>
+            <h2><a class="article-title" href="{{url_for('slds.slide', slide_id = slide.id)}}">{{ slide.title }}</a></h2>
             <div class="container">
               <div class="row">
                 <div class="col">
@@ -16,23 +16,23 @@
                   <div class="row">
                     <div class="col">
                       {% if current_user.has_liked_slide(slide) %}
-                        <a href="{{ url_for('like_action', slide_id = slide.id, action = 'unlike') }}"><i class="fa fa-heart"></i></a>
+                        <a href="{{ url_for('slds.like_action', slide_id = slide.id, action = 'unlike') }}"><i class="fa fa-heart"></i></a>
                       {% else %}
-                        <a href="{{ url_for('like_action', slide_id = slide.id, action = 'like') }}"><i class="fa fa-heart-o"></i></a>
+                        <a href="{{ url_for('slds.like_action', slide_id = slide.id, action = 'like') }}"><i class="fa fa-heart-o"></i></a>
                       {% endif %}
                       <p>{{ slide.likes|count }} likes</p>
                     </div>
                     <div class="col">
-                      <a href="{{ url_for('download', name = slide.file) }}">
+                      <a href="{{ url_for('slds.download', name = slide.file) }}">
                       <i class="fa fa-download"></i></a>
                     </div>
                   </div>
                 </div>
                 <div class="col">
-                  <p class="article-content">{{ slide.description | truncate(300)}}<a href="{{ url_for('slide', slide_id = slide.id) }}">show more</a></p>
+                  <p class="article-content">{{ slide.description | truncate(300)}}<a href="{{ url_for('slds.slide', slide_id = slide.id) }}">show more</a></p>
                 </div>
               </div>
-<!--               <a href="{{ url_for('download', name = slide.file) }}">download</a>
+<!--               <a href="{{ url_for('slds.download', name = slide.file) }}">download</a>
  -->
             </div>            
           </div>

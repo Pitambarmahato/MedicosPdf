@@ -1,27 +1,30 @@
 {% extends 'layout.html' %}
 {% block content %}
+  {% if posts.items | count == 0 %}
+    <h1>No Slides Related to this category.</h1>
+  {% else %}
     {% for slide in posts.items %}
         <article class="media content-section">
           <img class="rounded-circle article-img" src="{{ url_for('static', filename = 'profile_pics/' + slide.author.image_file) }}">
           <div class="media-body">
             <div class="article-metadata">
-              <a class="mr-2" href="{{ url_for('account', username = slide.author.username) }}">{{ slide.author.username }}</a>
+              <a class="mr-2" href="{{ url_for('users.account', user_id = slide.author.id) }}">{{ slide.author.username }}</a>
               <small class="text-muted">{{ slide.date_posted.strftime('%Y-%m-%d') }}</small>
             </div>
-            <h2><a class="article-title" href="{{url_for('slide', slide_id = slide.id)}}">{{ slide.title }}</a></h2>
+            <h2><a class="article-title" href="{{url_for('slds.slide', slide_id = slide.id)}}">{{ slide.title }}</a></h2>
             <div class="container">
               <div class="row">
                 <div class="col">
                   <iframe name="plugin" src="{{ url_for('static', filename = 'slide_files/'+ slide.file) }}" type="application/pdf" width="300" height="215"></iframe>
                 </div>
                 <div class="col">
-                  <p class="article-content">{{ slide.description | truncate(300)}}<a href="{{ url_for('slide', slide_id = slide.id) }}">show more</a></p>
+                  <p class="article-content text-justify">{{ slide.description | truncate(300)}}<a href="{{ url_for('slds.slide', slide_id = slide.id) }}">show more</a></p>
                 </div>
               </div>
               {% if current_user.has_liked_slide(slide) %}
-                <a href="{{ url_for('like_action', slide_id = slide.id, action = 'unlike') }}"><i class="fa fa-heart"></i></a>
+                <a href="{{ url_for('slds.like_action', slide_id = slide.id, action = 'unlike') }}"><i class="fa fa-heart"></i></a>
               {% else %}
-                <a href="{{ url_for('like_action', slide_id = slide.id, action = 'like') }}"><i class="fa fa-heart-o"></i></a>
+                <a href="{{ url_for('slds.like_action', slide_id = slide.id, action = 'like') }}"><i class="fa fa-heart-o"></i></a>
               {% endif %}
               <p>{{ slide.likes|count }} likes</p>
 
@@ -31,16 +34,17 @@
     {% endfor %}
 
     {% if posts.has_prev %}
-      <a href="{{ url_for('category',cat_id = cat.id, page=posts.prev_num) }}">&lt;&lt; Newer posts</a>
+      <a href="{{ url_for('slds.category',cat_id = cat.id, page=posts.prev_num) }}">&lt;&lt; Newer posts</a>
     {% else %}
       Newer posts
     {% endif %} | 
     {% if posts.has_next %}
-      <a href="{{ url_for('category', cat_id = cat.id, page=posts.next_num) }}">Older posts &gt;&gt;
+      <a href="{{ url_for('slds.category', cat_id = cat.id, page=posts.next_num) }}">Older posts &gt;&gt;
       </a>
     {% else %}
       Older posts &gt;&gt;
     {% endif %}
+  {% endif %}
 
 
     {% endblock %}

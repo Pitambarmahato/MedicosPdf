@@ -7,27 +7,30 @@
 	        <div class="media-body">
 		        <h2 class="account-heading">{{ user.username }}</h2>
 		        <p class="text-secondary">{{ user.email }}</p>
-				<p>{{ user.followers.count() }} followers |
+				<p>{{ user.followers.count() }} followers | 
 					{% if user == current_user %}
-						<a href="#">Edit your profile</a>
+						<a href="{{ url_for('users.update_user', user_id = user.id)}}">Edit your profile</a>
 					{% elif not current_user.is_following(user) %}
-						<a href="{{ url_for('follow', username = user.username) }}">Follow</a>
+						<a href="{{ url_for('users.follow', username = user.username) }}">Follow</a>
 					{% else %}
-						<a href="{{ url_for('unfollow', username = user.username) }}">Unfollow</a>
+						<a href="{{ url_for('users.unfollow', username = user.username) }}">Unfollow</a>
 					{% endif %}
 				</p>
 	        </div>
 	  	</div>
 	  	<div>
+	  	{% if slides.items | count == 0 %}
+	  		<h1>No posts</h1>
+	  	{% else %}
 	  		{% for slide in slides.items %}
 				<article class="media content-section">
 		          <img class="rounded-circle article-img" src="{{ url_for('static', filename = 'profile_pics/' + slide.author.image_file) }}">
 		          <div class="media-body">
 		            <div class="article-metadata">
-		              <a class="mr-2" href="{{ url_for('account', user_id = slide.author.id) }}">{{ slide.author.username }}</a>
+		              <a class="mr-2" href="{{ url_for('users.account', user_id = slide.author.id) }}">{{ slide.author.username }}</a>
 		              <small class="text-muted">{{ slide.date_posted.strftime('%Y-%m-%d') }}</small>
 		            </div>
-		            <h2><a class="article-title" href="{{url_for('slide', slide_id = slide.id)}}">{{ slide.title }}</a></h2>
+		            <h2><a class="article-title" href="{{url_for('slds.slide', slide_id = slide.id)}}">{{ slide.title }}</a></h2>
 		            <div class="container">
 		              <div class="row">
 		                <div class="col">
@@ -42,13 +45,13 @@
 		                      <p id = "likeCount_{{slide.id}}">{{ slide.likes | count }}</p>
 		                    </div>
 		                    <div class="col">
-		                      <a href="{{ url_for('download', name = slide.file) }}">
+		                      <a href="{{ url_for('slds.download', name = slide.file) }}">
 		                      <i class="fa fa-download"></i></a>
 		                    </div>
 		                  </div>
 		                </div>
 		                <div class="col">
-		                  <p class="article-content text-justify">{{ slide.description | truncate(300)}}<a href="{{ url_for('slide', slide_id = slide.id) }}">show more</a></p>
+		                  <p class="article-content text-justify">{{ slide.description | truncate(300)}}<a href="{{ url_for('slds.slide', slide_id = slide.id) }}">show more</a></p>
 		                </div>
 		              </div>
 		            </div>            
@@ -57,16 +60,17 @@
 	  		{% endfor %}
 
 		  	{% if slides.has_prev %}
-		      <a href="{{ url_for('account',user_id = user.id, page=slides.prev_num) }}">&lt;&lt; Newer slides</a>
+		      <a href="{{ url_for('users.account',user_id = user.id, page=slides.prev_num) }}">&lt;&lt; Newer slides</a>
 		    {% else %}
 		      Newer slides
 		    {% endif %} | 
 		    {% if slides.has_next %}
-		      <a href="{{ url_for('accounta', user_id = user.id, page=slides.next_num) }}">Older slides &gt;&gt;
+		      <a href="{{ url_for('users.account', user_id = user.id, page=slides.next_num) }}">Older slides &gt;&gt;
 		      </a>
 		    {% else %}
 		      Older slides &gt;&gt;
 		    {% endif %}
+		{% endif %}
 
 	  	</div>
 	</div>

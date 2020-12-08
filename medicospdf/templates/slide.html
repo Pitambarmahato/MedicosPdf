@@ -21,13 +21,20 @@
 				    </div>
 				</div>
 	            <div class="col-3">
-	              <a href="{{ url_for('download', name = slide.file) }}">
+	              <a href="{{ url_for('slds.download', name = slide.file) }}">
 	              <i class="fa fa-download"></i></a>
 	              <p style="margin-left: -20px">download</p>
 	            </div>
 	            <div class="col-3">
 	            	<i class="fa fa-eye"></i>
 	            	<p>{{ visitors.count }}</p>
+	            </div>
+	            <div class="col-3">
+	            	{% if current_user == slide.author %}
+	            		<a href="{{ url_for('slds.delete_slide', slide_id = slide.id) }}"><button class = 'btn btn-danger'>Delete</button></a>
+	            	{% else %}
+	            		<a href="#"><button class="btn btn-danger">Report</button></a>
+	            	{% endif %}
 	            </div>
           	</div>
           	<div class="row text-justify">
@@ -37,31 +44,6 @@
 			<div class="article-content text-justify"><p><b>About Slide:&nbsp;</b>{{ slide.description }}</p></div>
 			<div class="article-content"><p>Category:&nbsp; {{ slide.cats.name }}</p></div>
 			<p><b>{{ slide.comments|count }} comments</b></p><hr>
-			{% for comment in comments.items %}
-				<div class="article-metadata">
-					<img class="rounded-circle article-img" src="{{ url_for('static', filename = 'profile_pics/'+comment.author.image_file) }}">
-					<a class="mr-2" href="#">{{ comment.author.username }}</a>
-					<span>
-						<p class="text text-justify">{{ comment.comment }}</p>
-					</span>
-				</div>
-			{% endfor %}
-			<div class="row">
-				<div class="col">
-					{% if comments.has_prev %}
-				      <a class ="btn btn-outline-info" href="{{ url_for('slide', slide_id = slide.id,  page=comments.prev_num) }}">&lt;&lt;</a>
-				    {% else %}
-				      <button class="btn btn-outline-info disabled">&lt;</button>
-				    {% endif %}
-				</div>
-			    <div class="col-3">
-				    {% if comments.has_next %}
-				    	<a class="btn btn-outline-info" href="{{ url_for('slide',slide_id = slide.id, page=comments.next_num) }}">&gt;&gt;</a>
-				    {% else %}
-				    	<button class="btn btn-outline-info disabled">&gt;</button>
-				    {% endif %}
-			    </div>
-			</div>
 			<form method="POST" action="">
 				{{ form.hidden_tag() }}
 				<fieldset class="form-group">
@@ -87,8 +69,33 @@
 
 				</fieldset>
 			</form>
+			{% for comment in comments.items %}
+				<div class="article-metadata">
+					<img class="rounded-circle article-img" src="{{ url_for('static', filename = 'profile_pics/'+comment.author.image_file) }}">
+					<a class="mr-2" href="#">{{ comment.author.username }}</a>
+					<span>
+						<p class="text text-justify">{{ comment.comment }}</p>
+					</span>
+				</div>
+			{% endfor %}
+			<div class="row">
+				<div class="col">
+					{% if comments.has_prev %}
+				      <a class ="btn btn-outline-info" href="{{ url_for('slds.slide', slide_id = slide.id,  page=comments.prev_num) }}">&lt;&lt;</a>
+				    {% else %}
+				      <button class="btn btn-outline-info disabled">&lt;</button>
+				    {% endif %}
+				</div>
+			    <div class="col-3">
+				    {% if comments.has_next %}
+				    	<a class="btn btn-outline-info" href="{{ url_for('slds.slide',slide_id = slide.id, page=comments.next_num) }}">&gt;&gt;</a>
+				    {% else %}
+				    	<button class="btn btn-outline-info disabled">&gt;</button>
+				    {% endif %}
+			    </div>
+			</div>
 		</div>
-	</article>
+	</article>	
     <script src="http://code.jquery.com/jquery.js"></script>
     <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
 	<script src="{{ url_for('static', filename = 'pdfobject.min.js') }}"></script>
@@ -131,6 +138,7 @@
     	PDFObject.embed(slide_name, viewer);
 
     </script>
+
 
 {% endblock %}
 

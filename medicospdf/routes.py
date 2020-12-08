@@ -1,10 +1,11 @@
 from flask import render_template, url_for, flash, redirect, request, jsonify, send_file, send_from_directory, g
 from medicospdf import app, db, bcrypt, mail
-from medicospdf.forms import RegistrationForm, LoginForm, SlideForm, CommentForm, SearchForm, RequestResetForm, ResetPasswordForm
+from medicospdf.forms import RegistrationForm, LoginForm, SlideForm, CommentForm, SearchForm, RequestResetForm, ResetPasswordForm, UpdateUserForm
 from medicospdf.models import User, Post, Slide, Comment, Category, followers, Visit
 from flask_login import login_user, current_user, logout_user, login_required
 import secrets
 import os
+from PIL import Image
 import datetime
 from flask_mail import Message
 from itsdangerous import URLSafeTimedSerializer
@@ -32,6 +33,20 @@ def save_file(form_file):
     file_conv = convert_file(file_fn, random_hex)
     print(file_conv)
     return file_conv, random_hex
+
+def save_picture(form_picture):
+    random_hex = secrets.token_hex(8)
+    _, f_ext = os.path.splitext(form_picture.filename) 
+    picture_fn = random_hex + f_ext
+    picture_path = os.path.join(app.root_path, 'static/profile_pics', picture_fn)
+
+    output_size = (125, 125)        #resizing the image before uploading to the site
+    i = Image.open(form_picture)
+    i.thumbnail(output_size)
+    i.save(picture_path)
+
+    return picture_fn
+
 
 def send_reset_email(user):
     token = user.get_reset_token()
@@ -74,6 +89,7 @@ def confirm_token(token, expiration=3600):
 def home():
     cat = Category.query.all()
     page = request.args.get('page', 1, type = int)
+    slds = Slide.query.order_by(Slide.date_posted.desc()).paginate(page = page, per_page = 2)
     slides = current_user.followed_posts().paginate(page = page, per_page = 2)
     if request.method == 'POST' and 'tag' in request.form:
         tag = request.form['tag']
@@ -81,7 +97,7 @@ def home():
         slides = Slide.query.filter(Slide.title.like(search))
         return render_template('search.html', posts = slides, categories = cat)
 
-    return render_template('home.html', posts=slides, categories = cat)
+    return render_template('home.html', posts=slides, categories = cat, slds = slds)
 
 @app.route('/slide/<int:slide_id>', methods= ['GET', 'POST'])
 @login_required
@@ -266,8 +282,9 @@ def account(user_id):
 @check_confirmed
 def explore():
     page = request.args.get('page', 1, type = int)
+    cats = Category.query.all()
     slides = Slide.query.order_by(Slide.date_posted.desc()).paginate(page = page, per_page = 10)
-    return render_template('explore.html', posts = slides)
+    return render_template('explore.html', posts = slides, categories = cats)
 
 @app.route('/category/<int:cat_id>')
 @login_required
@@ -316,7 +333,6 @@ def unfollow(username):
 
 
 @app.route('/reset_password', methods = ['GET', 'POST'])
-@login_required
 def reset_request():
     if current_user.is_authenticated:
         return redirect(url_for('home'))
@@ -329,7 +345,6 @@ def reset_request():
     return render_template('reset_request.html', title = 'Reset Request', form = form)
 
 @app.route('/reset_password/<token>', methods = ['GET', 'POST'])
-@login_required
 def reset_token(token):
     if current_user.is_authenticated:
         return redirect(url_for('home'))
@@ -355,6 +370,35 @@ def people():
     return render_template('people.html', users = users)
 
 
+@app.route('/delete/<int:slide_id>', methods = ['GET', 'POST'])
+@login_required
+def delete_slide(slide_id):
+    slide = Slide.query.get_or_404(slide_id)
+    if slide.author != current_user: #if the user is trying to delete the post of other user then it will be aborted.s
+        abort(403)
+
+    db.session.delete(slide)
+    db.session.commit()
+    flash('Your slide has been deleted!', 'danger')
+    return redirect(url_for('account', user_id = slide.author.id))
+
+
+@app.route('/update/<int:user_id>', methods = ['GET', 'POST'])
+@login_required
+def update_user(user_id):
+    form = UpdateUserForm()
+    if form.validate_on_submit():
+        if form.picture.data:
+            picture_file = save_picture(form.picture.data)
+            current_user.image_file = picture_file
+        current_user.username = form.username.data
+        db.session.commit()
+        flash('Your account has been updated!', 'success')
+        return redirect(url_for('account', user_id = current_user.id))
+    elif request.method == 'GET':
+        form.username.data = current_user.username
+    image_file = url_for('static', filename = 'profile_pics/' + current_user.image_file)
+    return render_template('update_account.html', title = 'Update Profile', image_file = image_file, form = form)
 
 
 @app.route('/testing/<int:slide_id>')

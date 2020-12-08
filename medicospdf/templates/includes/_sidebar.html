@@ -1,0 +1,14 @@
+        {% if current_user.is_authenticated %}
+          <div class="col-md-4">
+            <div class="content-section">
+              <h3>Categories</h3>
+              <p class='text-muted'>
+                <ul class="list-group">
+                  {% for cat in categories %}
+                    <li class="list-group-item list-group-item-light"><a href="{{ url_for('category', cat_id = cat.id) }}">{{ cat.name }}</a></li>
+                  {% endfor %}
+                </ul>
+              </p>
+            </div>
+          </div>
+        {% endif %}
